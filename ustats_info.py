@@ -28,7 +28,7 @@ def configure_callback(conf):
   for c in conf.children:
     if c.key  == 'UstatsURL':
       url = c.values[0]
-    if c.key == 'Verbose':
+    elif c.key == 'Verbose':
       VERBOSE_LOGGING = bool(c.values[0])
     else:
       collectd.warning ('ustats_info plugin: Unknown config key: %s.' % c.key)
@@ -46,6 +46,7 @@ def read_callback():
 
   log_verbose('Read callback called')
   data = fetch_data(url)
+  last_backend = None
   if not data:
     collectd.error('ustats plugin: No data received')
     return
@@ -58,12 +59,13 @@ def read_callback():
 
   for upstream in upstreams:
     for index in range(len(data[upstream])):
-      if data[upstream][index] and data[upstream][index] !=1:
+      if data[upstream][index] and data[upstream][index] !=1 and  data[upstream][index][0] != last_backend:
         dispatch_value(upstream, getValue(data[upstream][index][4], old_data[upstream][index][4]), 'http_499_errors',  data[upstream][index][0].partition(":")[0])
         dispatch_value(upstream, getValue(data[upstream][index][5], old_data[upstream][index][5]), 'http_500_errors',  data[upstream][index][0].partition(":")[0])
         dispatch_value(upstream, getValue(data[upstream][index][6], old_data[upstream][index][6]), 'http_503_errors',  data[upstream][index][0].partition(":")[0])
         dispatch_value(upstream, getValue(data[upstream][index][7], old_data[upstream][index][7]), 'tcp_errors',  data[upstream][index][0].partition(":")[0])
         dispatch_value(upstream, getValue(data[upstream][index][13], old_data[upstream][index][13]), 'total_errors', data[upstream][index][0].partition(":")[0])
+        last_backend = data[upstream][index][0]
   old_data = data
 
 def log_verbose(msg):
